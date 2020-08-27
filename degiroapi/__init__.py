@@ -333,3 +333,43 @@ class DeGiro:
         return \
             self.__request(DeGiro.__GET_STOCKS_URL, None, stock_list_params, error_message='Could not get stock list')[
                 'products']
+
+    def get_stock_list_by_country(self, stockCountryId, limit = None):
+        
+        products = []
+
+        stock_list_params = {
+            'stockCountryId': stockCountryId,
+            'offset': 0,
+            'isInUSGreenList': "false",
+            'limit': 10,
+            'requireTotal': "true",
+            'sortColumns': "name",
+            'sortTypes': "asc",
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+
+        total = self.__request(DeGiro.__GET_STOCKS_URL, None, stock_list_params, error_message='Could not get stock list')['total']
+        #print(str(total))
+
+        dif = round(total / 1000, 0) +1
+        #print(str(dif))
+
+        for x in range(int(dif)):
+            stock_list_params['limit'] = 1000
+            stock_list_params['offset'] = x*1000
+            #print(stock_list_params)
+
+            prods = self.__request(DeGiro.__GET_STOCKS_URL, None, stock_list_params, error_message='Could not get stock list')[
+                'products']
+
+            for prod in prods:
+                products.append(prod)
+
+            if limit != None:
+                if (len(products)>limit):
+                    return products
+            #print(len(products))
+
+        return products
