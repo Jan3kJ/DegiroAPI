@@ -5,7 +5,7 @@ from degiroapi.order import Order
 from degiroapi.client_info import ClientInfo
 from degiroapi.datatypes import Data
 from degiroapi.intervaltypes import Interval
-
+from pandas import DataFrame
 session = requests.Session()
 
 class AuthorisationError(Exception):
@@ -210,34 +210,73 @@ class DeGiro:
                               delete_order_params,
                               request_type=DeGiro.__DELETE_REQUEST,
                               error_message='Could not delete order' + " " + orderId)
+    def get_order(self, orderId):
+        ords = DataFrame(self.orders())
+        ords = ords[ords['orderId']==orderId]
+        if len(ords)==1:
+            return ords.iloc[0].to_dict()
+        elif len(ords)>1:
+            return ords.iloc[-1].to_dict()
+        else:
+            return None
 
-    def modify_order(self, orderType, orderId, productId, buySell, timeType, size, limit=None):
-            modify_order_params = {
-                'intAccount': self.client_info.account_id,
-                'sessionId': self.session_id,
-            }
-            if orderType == Order.Type.LIMIT:
-                order_payload = {
-                    'buySell': buySell,
-                    'orderType': Order.Type.LIMIT,
-                    'productId': productId,
-                    'timeType': timeType,
-                    'size': size,
-                    'price': limit
-                }
-            elif orderType == Order.Type.STOPLOSS:
-                order_payload = {
-                    'buySell': buySell,
-                    'orderType': Order.Type.STOPLOSS,
-                    'productId': productId,
-                    'timeType': timeType,
-                    'size': size,
-                    'stopPrice': limit
-                }
 
-            return self.__request(DeGiro.__ORDER_URL + orderId + ';jsessionid=' + self.session_id, None,
-                                  order_payload, request_type=DeGiro.__PUT_REQUEST,
-                                  error_message='Could not modify order' + " " + orderId)
+    def modify_order(self, orderId, orderType=None, productId=None, timeType=None, size=None, limit=None, stop_loss=None):
+        check_dc = locals()
+        buysell_dc = {"S": "SELL", "B": "BUY"}
+        check_dc.pop("self")
+        check_dc.pop('orderId')
+        assert not all(v==None for v in check_dc.values()), 'This would change nothing to the order'
+        old = self.get_order(orderId)
+        if not old:
+            raise ValueError("Order not found")
+        order_payload = {
+            'buySell': buysell_dc[old['buysell']],
+            'orderType': orderType or int(old['orderTypeId']) ,
+            'productId': int(old['productId']),
+            'timeType': timeType or int(old['orderTimeTypeId']) ,
+            'size': size or old['size'],
+            'price': limit or old['price'],
+            'stopPrice': stop_loss or old['stopPrice']
+        }
+        old_order_payload = {
+            'buySell': buysell_dc[old['buysell']],
+            'orderType': int(old['orderTypeId']) ,
+            'productId': int(old['productId']),
+            'timeType': int(old['orderTimeTypeId']) ,
+            'size':  old['size'],
+            'price':  old['price'],
+            'stopPrice': old['stopPrice']
+        }
+        assert order_payload!=old_order_payload, 'This would change nothing to the order'
+#         print(order_payload)
+        modify_order_params = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id,
+        }
+#         if orderType == Order.Type.LIMIT:
+#             order_payload = {
+# #                     'buySell': buySell,
+#                 'orderType': Order.Type.LIMIT,
+#                 'productId': productId,
+#                 'timeType': timeType,
+#                 'size': size,
+#                 'price': limit
+#             }
+#         elif orderType == Order.Type.STOPLOSS:
+#             order_payload = {
+# #                     'buySell': buySell,
+#                 'orderType': Order.Type.STOPLOSS,
+#                 'productId': productId,
+#                 'timeType': timeType,
+#                 'size': size,
+#                 'price': limit,
+#                 'stopPrice': stop_loss
+#             }
+
+        return self.__request(DeGiro.__ORDER_URL + orderId + ';jsessionid=' + self.session_id, None,
+                              order_payload, request_type=DeGiro.__PUT_REQUEST,
+                              error_message='Could not modify order' + " " + orderId)
 
 
     @staticmethod
@@ -345,10 +384,11 @@ class DeGiro:
 
         self.confirmation_id = place_check_order_response['data']['confirmationId']
 
-        self.__request(DeGiro.__ORDER_URL + self.confirmation_id + ';jsessionid=' + self.session_id, None,
+        resp = self.__request(DeGiro.__ORDER_URL + self.confirmation_id + ';jsessionid=' + self.session_id, None,
                        place_buy_order_payload, place_buy_order_params,
                        request_type=DeGiro.__POST_REQUEST,
                        error_message='Could not confirm order')
+        return resp
 
     def sellorder(self, orderType, productId, timeType, size, limit=None, stop_loss=None):
         place_sell_order_params = {
@@ -378,10 +418,11 @@ class DeGiro:
 
         self.confirmation_id = place_check_order_response['data']['confirmationId']
 
-        self.__request(DeGiro.__ORDER_URL + self.confirmation_id + ';jsessionid=' + self.session_id, None,
+        resp = self.__request(DeGiro.__ORDER_URL + self.confirmation_id + ';jsessionid=' + self.session_id, None,
                        place_sell_order_payload, place_sell_order_params,
                        request_type=DeGiro.__POST_REQUEST,
                        error_message='Could not confirm order')
+        return resp
 
     def get_stock_list(self, indexId, stockCountryId):
         stock_list_params = {
