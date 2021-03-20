@@ -11,6 +11,9 @@ session = requests.Session()
 class AuthorisationError(Exception):
     pass
 
+class NoChangeError(Exception):
+    pass
+
 class DeGiro:
     __LOGIN_URL = 'https://trader.degiro.nl/login/secure/login'
     __CONFIG_URL = 'https://trader.degiro.nl/login/secure/config'
@@ -226,19 +229,25 @@ class DeGiro:
         buysell_dc = {"S": "SELL", "B": "BUY"}
         check_dc.pop("self")
         check_dc.pop('orderId')
-        assert not all(v==None for v in check_dc.values()), 'This would change nothing to the order'
+        if all(v==None for v in check_dc.values()):
+            raise NoChangeError('This would change nothing to the order')
         old = self.get_order(orderId)
         if not old:
             raise ValueError("Order not found")
+        assert old['isActive'], "This order is not active anymore"
+#         print(orderType, int(old['orderTypeId']))
         order_payload = {
             'buySell': buysell_dc[old['buysell']],
-            'orderType': orderType or int(old['orderTypeId']) ,
             'productId': int(old['productId']),
             'timeType': timeType or int(old['orderTimeTypeId']) ,
             'size': size or old['size'],
             'price': limit or old['price'],
             'stopPrice': stop_loss or old['stopPrice']
         }
+        if orderType != None:
+            order_payload['orderType'] = orderType
+        else:
+            order_payload['orderType'] = int(old['orderTypeId'])
         old_order_payload = {
             'buySell': buysell_dc[old['buysell']],
             'orderType': int(old['orderTypeId']) ,
@@ -248,8 +257,9 @@ class DeGiro:
             'price':  old['price'],
             'stopPrice': old['stopPrice']
         }
-        assert order_payload!=old_order_payload, 'This would change nothing to the order'
-#         print(order_payload)
+#         print(order_payload, old_order_payload)
+        if order_payload == old_order_payload:
+            raise NoChangeError('This would change nothing to the order')
         modify_order_params = {
             'intAccount': self.client_info.account_id,
             'sessionId': self.session_id,
