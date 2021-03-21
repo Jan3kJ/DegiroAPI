@@ -18,16 +18,21 @@ class DeGiro:
     __PRODUCT_INFO_URL = 'https://trader.degiro.nl/product_search/secure/v5/products/info'
     __TRANSACTIONS_URL = 'https://trader.degiro.nl/reporting/secure/v4/transactions'
     __ORDERS_URL = 'https://trader.degiro.nl/reporting/secure/v4/order-history'
+    __ACCOUNT_URL = 'https://trader.degiro.nl/reporting/secure/v6/accountoverview'
+    __DIVIDENDS_URL = 'https://trader.degiro.nl/reporting/secure/v3/ca/'
 
     __PLACE_ORDER_URL = 'https://trader.degiro.nl/trading/secure/v5/checkOrder'
     __ORDER_URL = 'https://trader.degiro.nl/trading/secure/v5/order/'
 
     __DATA_URL = 'https://trader.degiro.nl/trading/secure/v5/update/'
     __PRICE_DATA_URL = 'https://charting.vwdservices.com/hchart/v1/deGiro/data.js'
+    
+    __COMPANY_RATIOS_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-ratios/'
 
     __GET_REQUEST = 0
     __POST_REQUEST = 1
     __DELETE_REQUEST = 2
+    __PUT_REQUEST = 3
 
     client_token = any
     session_id = any
@@ -83,6 +88,8 @@ class DeGiro:
             response = requests.post(url, params=post_params, json=payload)
         elif request_type == DeGiro.__POST_REQUEST:
             response = requests.post(url, json=payload)
+        elif request_type == DeGiro.__PUT_REQUEST:
+            response = requests.put(url, params=post_params, json=payload)
         else:
             raise Exception(f'Unknown request type: {request_type}')
 
@@ -115,6 +122,18 @@ class DeGiro:
                               data=json.dumps([str(product_id)]),
                               request_type=DeGiro.__POST_REQUEST,
                               error_message='Could not get product info.')['data'][str(product_id)]
+    
+    def company_ratios(self, product_isin):
+        product_info_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__COMPANY_RATIOS_URL+product_isin,
+                              None, product_info_payload,
+                              headers={'content-type': 'application/json'},
+                              data=None,
+                              request_type=DeGiro.__GET_REQUEST,
+                              error_message='Could not get company ratios.')['data']
 
     def transactions(self, from_date, to_date, group_transactions=False):
         transactions_payload = {
@@ -126,6 +145,24 @@ class DeGiro:
         }
         return self.__request(DeGiro.__TRANSACTIONS_URL, None, transactions_payload,
                               error_message='Could not get transactions.')['data']
+
+    def account_overview(self, from_date, to_date):
+        account_payload = {
+            'fromDate': from_date.strftime('%d/%m/%Y'),
+            'toDate': to_date.strftime('%d/%m/%Y'),
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__ACCOUNT_URL, None, account_payload,
+                              error_message='Could not get account overview.')['data']
+
+    def future_dividends(self):
+        dividends_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__DIVIDENDS_URL + str(self.client_info.account_id), None, dividends_payload,
+                              error_message='Could not get future dividends.')['data']
 
     def orders(self, from_date, to_date, not_executed=None):
         orders_payload = {
@@ -157,6 +194,34 @@ class DeGiro:
                               delete_order_params,
                               request_type=DeGiro.__DELETE_REQUEST,
                               error_message='Could not delete order' + " " + orderId)
+
+    def modify_order(self, orderType, orderId, productId, buySell, timeType, size, limit=None):
+        modify_order_params = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id,
+        }
+        if orderType == Order.Type.LIMIT:
+            order_payload = {
+                'buySell': buySell,
+                'orderType': Order.Type.LIMIT,
+                'productId': productId,
+                'timeType': timeType,
+                'size': size,
+                'price': limit
+            }
+        elif orderType == Order.Type.STOPLOSS:
+            order_payload = {
+                'buySell': buySell,
+                'orderType': Order.Type.STOPLOSS,
+                'productId': productId,
+                'timeType': timeType,
+                'size': size,
+                'stopPrice': limit
+            }
+
+        return self.__request(DeGiro.__ORDER_URL + orderId + ';jsessionid=' + self.session_id, None,
+                              order_payload, request_type=DeGiro.__PUT_REQUEST,
+                              error_message='Could not modify order' + " " + orderId)
 
     @staticmethod
     def filtercashfunds(cashfunds):
@@ -253,7 +318,7 @@ class DeGiro:
                 and orderType != Order.Type.LIMIT and orderType != Order.Type.STOPLOSS:
             raise Exception('Invalid order type')
 
-        if timeType != 1 and timeType != 3:
+        if timeType != Order.Time.DAY and timeType != Order.Time.GTC:
             raise Exception('Invalid time type')
 
         place_check_order_response = self.__request(DeGiro.__PLACE_ORDER_URL + ';jsessionid=' + self.session_id, None,
@@ -286,7 +351,7 @@ class DeGiro:
                 and orderType != Order.Type.LIMIT and orderType != Order.Type.STOPLOSS:
             raise Exception('Invalid order type')
 
-        if timeType != 1 and timeType != 3:
+        if timeType != Order.Time.DAY and timeType != Order.Time.GTC:
             raise Exception('Invalid time type')
 
         place_check_order_response = self.__request(DeGiro.__PLACE_ORDER_URL + ';jsessionid=' + self.session_id, None,
