@@ -24,6 +24,7 @@ class DeGiro:
 
     __GET_STOCKS_URL = 'https://trader.degiro.nl/products_s/secure/v5/stocks'
     __PRODUCT_SEARCH_URL = 'https://trader.degiro.nl/product_search/secure/v5/products/lookup'
+    __WARRANT_SEARCH_URL = 'https://trader.degiro.nl/product_search/secure/v5/warrants'
     __PRODUCT_INFO_URL = 'https://trader.degiro.nl/product_search/secure/v5/products/info'
     __TRANSACTIONS_URL = 'https://trader.degiro.nl/reporting/secure/v4/transactions'
     __ORDERS_URL = 'https://trader.degiro.nl/reporting/secure/v4/order-history'
@@ -36,6 +37,7 @@ class DeGiro:
     __PRICE_DATA_URL = 'https://charting.vwdservices.com/hchart/v1/deGiro/data.js'
 
     __COMPANY_RATIOS_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-ratios/'
+    __COMPANY_PROFILE_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-profile/v2/'
 
     __GET_REQUEST = 0
     __POST_REQUEST = 1
@@ -111,7 +113,7 @@ class DeGiro:
             except:
                 return "No data"
         elif response.status_code == 401:
-            raise AuthorisationError(response._content)  
+            raise AuthorisationError("Request not authorized. Session probably expired.")  
         
         else:
             raise Exception(f'{error_message} Response: {response.text}')
@@ -125,6 +127,17 @@ class DeGiro:
             'sessionId': self.session_id
         }
         return self.__request(DeGiro.__PRODUCT_SEARCH_URL, None, product_search_payload,
+                              error_message='Could not get products.')['products']
+    
+    def search_warrants(self, search_text, limit=1):
+        warrant_search_payload = {
+            'searchText': search_text,
+            'limit': limit,
+            'offset': 0,
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__WARRANT_SEARCH_URL, None, warrant_search_payload,
                               error_message='Could not get products.')['products']
 
     def product_info(self, product_id):
@@ -148,6 +161,20 @@ class DeGiro:
                               data=None,
                               request_type=DeGiro.__GET_REQUEST,
                               error_message='Could not get company ratios.')['data']
+    
+    def company_profile(self, product_isin):
+        product_info_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__COMPANY_PROFILE_URL+product_isin,
+                              None, product_info_payload,
+                              headers={'content-type': 'application/json'},
+                              data=None,
+                              request_type=DeGiro.__GET_REQUEST,
+                              error_message='Could not get company profile.')['data']
+    
+    
 
     def transactions(self, from_date=None, to_date=None, group_transactions=False):
         if not from_date:
@@ -349,6 +376,18 @@ class DeGiro:
                 error_message='Could not get data')
 
     def real_time_price(self, product_id, interval):
+        """
+        interval =
+            One_Day = 'P1D',
+            One_Week = 'P1W',
+            One_Month = 'P1M',
+            Three_Months = 'P3M',
+            Six_Months = 'P6M',
+            One_Year = 'P1Y',
+            Three_Years = 'P3Y',
+            Five_Years = 'P5Y',
+            Max = 'P50Y'
+        """
         vw_id = self.product_info(product_id)['vwdId']
         tmp = vw_id
         try:
@@ -434,11 +473,11 @@ class DeGiro:
                        error_message='Could not confirm order')
         return resp
 
-    def get_stock_list(self, indexId, stockCountryId):
+    def get_stock_list(self, indexId, stockCountryId, offset=0):
         stock_list_params = {
             'indexId': indexId,
             'stockCountryId': stockCountryId,
-            'offset': 0,
+            'offset': offset,
             'limit': None,
             'requireTotal': "true",
             'sortColumns': "name",
