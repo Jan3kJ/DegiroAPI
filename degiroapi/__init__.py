@@ -38,6 +38,7 @@ class DeGiro:
 
     __COMPANY_RATIOS_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-ratios/'
     __COMPANY_PROFILE_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-profile/v2/'
+    __FINANCIALS_URL= 'https://trader.degiro.nl/dgtbxdsservice/financial-statements/'
 
     __GET_REQUEST = 0
     __POST_REQUEST = 1
@@ -162,6 +163,18 @@ class DeGiro:
                               request_type=DeGiro.__GET_REQUEST,
                               error_message='Could not get company ratios.')['data']
     
+    def company_ratios(self, product_isin):
+        product_info_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__COMPANY_RATIOS_URL+product_isin,
+                              None, product_info_payload,
+                              headers={'content-type': 'application/json'},
+                              data=None,
+                              request_type=DeGiro.__GET_REQUEST,
+                              error_message='Could not get company ratios.')['data']
+    
     def company_profile(self, product_isin):
         product_info_payload = {
             'intAccount': self.client_info.account_id,
@@ -173,6 +186,18 @@ class DeGiro:
                               data=None,
                               request_type=DeGiro.__GET_REQUEST,
                               error_message='Could not get company profile.')['data']
+    
+    def financials(self, product_isin):
+        product_info_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__FINANCIALS_URL+product_isin,
+                              None, product_info_payload,
+                              headers={'content-type': 'application/json'},
+                              data=None,
+                              request_type=DeGiro.__GET_REQUEST,
+                              error_message='Could not get financial statement.')['data']
     
     
 
