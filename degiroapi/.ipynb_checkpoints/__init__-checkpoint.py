@@ -40,7 +40,9 @@ class DeGiro:
     __COMPANY_RATIOS_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-ratios/'
     __COMPANY_PROFILE_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-profile/v2/'
     __FINANCIALS_URL= 'https://trader.degiro.nl/dgtbxdsservice/financial-statements/'
-
+    
+    __NEWS_URL = 'https://trader.degiro.nl/dgtbxdsservice/newsfeed/v2/news-by-company'
+    #https://trader.degiro.nl/dgtbxdsservice/newsfeed/v2/news-by-company?isin=US44862P1093&limit=10&offset=0&languages=en%2Cnl&intAccount=1482266&sessionId=A51C432E8FF87CE5016107466B25F77B.prod_a_112_1
     __GET_REQUEST = 0
     __POST_REQUEST = 1
     __DELETE_REQUEST = 2
@@ -226,7 +228,23 @@ class DeGiro:
                               request_type=DeGiro.__GET_REQUEST,
                               error_message='Could not get financial statement.')['data']
     
+    def news(self, product_isin, offset=0, limit=10, language='en%2Cnl'):
+        news_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        url='https://trader.degiro.nl/dgtbxdsservice/newsfeed/v2/news-by-company?isin={0}&limit={1}&offset={2}&languages={3}'.format(product_isin, limit, offset, language)
+        return self.__request(url,
+#             DeGiro.__NEWS_URL,
+#                               +product_isin+"&",
+                              None, news_payload,
+                              headers={'content-type': 'application/json'},
+                              data=None,
+                              request_type=DeGiro.__GET_REQUEST,
+                              error_message='Could not get news.')['data']
     
+    
+#     isin=US0378331005&limit=10&offset=0&languages=en%2Cnl&intAccount=1307110&sessionId=00ABA2A3FC4FC7326866598D6C6F4051.prod_a_112_4
 
     def transactions(self, from_date=None, to_date=None, group_transactions=False):
         if not from_date:
