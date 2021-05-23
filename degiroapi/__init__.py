@@ -42,7 +42,10 @@ class DeGiro:
     __FINANCIALS_URL= 'https://trader.degiro.nl/dgtbxdsservice/financial-statements/'
     
     __NEWS_URL = 'https://trader.degiro.nl/dgtbxdsservice/newsfeed/v2/news-by-company'
-    #https://trader.degiro.nl/dgtbxdsservice/newsfeed/v2/news-by-company?isin=US44862P1093&limit=10&offset=0&languages=en%2Cnl&intAccount=1482266&sessionId=A51C432E8FF87CE5016107466B25F77B.prod_a_112_1
+    
+    __OPTION_TABLE_URL = "https://trader.degiro.nl/product_search/secure/v5/options/"
+    __OPTION_DATA_URL = 'https://charting.vwdservices.com/hchart/v1/deGiro/data.js'
+    
     __GET_REQUEST = 0
     __POST_REQUEST = 1
     __DELETE_REQUEST = 2
@@ -169,7 +172,21 @@ class DeGiro:
         }
         return self.__request(DeGiro.__WARRANT_SEARCH_URL, None, warrant_search_payload,
                               error_message='Could not get products.')['products']
-
+    
+    def option_table(self, isin, limit=1, offset=0):
+        option_table_payload = {
+            'underlyingIsin': isin,
+#             'sortColumns': "expirationDate",
+#             'requireTotal': 'false',
+#             'sortTypes': "asc",
+            'offset': offset,
+            'limit': limit,
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id
+        }
+        return self.__request(DeGiro.__OPTION_TABLE_URL, None, option_table_payload,
+                              error_message='Could not get option table.')['products']
+ 
     def product_info(self, product_id):
         product_info_payload = {
             'intAccount': self.client_info.account_id,
