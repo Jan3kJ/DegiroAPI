@@ -26,6 +26,11 @@ portfolio = degiro.getdata(degiroapi.Data.Type.PORTFOLIO, True)
 for data in portfolio:
     print(data)
 
+# download portfolio as csv file
+csv_portfolio = degiro.download_csv('PORTFOLIO', datetime(2019, 1, 1), datetime.now())
+with open('portfolio.csv', 'w') as file:
+    file.write(csv_portfolio)
+
 # output one search result
 products = degiro.search_products('Pfizer')
 print(Product(products[0]).id)
