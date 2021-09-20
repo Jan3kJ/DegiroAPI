@@ -467,8 +467,9 @@ class DeGiro:
                 data_payload,
                 error_message='Could not get data')
 
-    def real_time_price(self, product_id, interval, resolution='PT1M'):
+    def real_time_price(self, product_id, interval, resolution='PT1M', _type='price'):
         """
+        price can also be 'ohlc'
         interval =
             One_Day = 'P1D',
             One_Week = 'P1W',
@@ -484,17 +485,37 @@ class DeGiro:
         tmp = vw_id
         try:
             int(tmp)
-        except:
-            vw_id = self.product_info(product_id)['vwdIdSecondary']
-
-        price_payload = {
+            price_payload = {
             'requestid': 1,
             'resolution': resolution,
             'period': interval,
             
-            'series': ['issueid:' + vw_id, 'price:issueid:' + vw_id],
+            'series': ['issueid:' + vw_id, _type+':issueid:' + vw_id],
             'userToken': self.client_token
-        }
+            }
+        except:
+            try:
+                vw_id = self.product_info(product_id)['vwdIdSecondary']
+                price_payload = {
+                'requestid': 1,
+                'resolution': resolution,
+                'period': interval,
+
+                'series': ['issueid:' + vw_id, _type+':issueid:' + vw_id],
+                'userToken': self.client_token
+                }
+            except:
+                vwdId = self.product_info(product_id)['vwdId']
+                price_payload = {
+                'requestid': 1,
+                'resolution': resolution,
+                'period': interval,
+
+                'series': ['vwdkey:' + vwdId, _type+':vwdkey:' + vwdId],
+                'userToken': self.client_token
+                }
+
+        
 
         return self.__request(DeGiro.__PRICE_DATA_URL, None, price_payload,
                              error_message='Could not get real time price')['series']
