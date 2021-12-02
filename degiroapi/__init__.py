@@ -473,19 +473,21 @@ class DeGiro:
             Five_Years = 'P5Y',
             Max = 'P50Y'
         """
-        vw_id = self.product_info(product_id)['vwdId']
-        tmp = vw_id
+        product_info = self.product_info(product_id)
+
+        vw_id = product_info['vwdId']
+        vw_id_type = product_info['vwdIdentifierType']
         try:
-            int(tmp)
             price_payload = {
-            'requestid': 1,
-            'resolution': resolution,
-            'period': interval,
-            
-            'series': ['issueid:' + vw_id, _type+':issueid:' + vw_id],
-            'userToken': self.client_token
+                'requestid': 1,
+                'resolution': resolution,
+                'period': interval,
+
+                'series': [vw_id_type + ':' + vw_id, 'price:' + vw_id_type + ':' + vw_id],
+                'userToken': self.client_token
             }
         except:
+            # will never get here, check later whether it's needed at all
             try:
                 vw_id = self.product_info(product_id)['vwdIdSecondary']
                 price_payload = {
