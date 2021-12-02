@@ -183,6 +183,7 @@ degiro.buyorder(Order.Type.LIMIT, Product(products[0]).id, Order.Time.GTC, 1, 30
 
 Sets a limit order when the stoploss price is reached (not bought for more than the limit at the stop loss price):
 **arguments**: order type, product id, execution time type (either Order.Time.DAY for "valid on a daily basis", or Order.Time.GTC for "unlimited"), size, limit(the limit price), stop_loss(stop loss price)
+
 ``` python
 degiro.buyorder(Order.Type.STOPLIMIT, Product(products[0]).id, Order.Time.GTC, 1, 38, 38)
 ```
@@ -191,6 +192,7 @@ degiro.buyorder(Order.Type.STOPLIMIT, Product(products[0]).id, Order.Time.GTC, 1
 
 Bought at the market price:
 **arguments**: order type, product id, execution time type (either Order.Time.DAY for "valid on a daily basis", or Order.Time.GTC for "unlimited"), size
+
 ``` python
 degiro.buyorder(Order.Type.MARKET, Product(products[0]).id, Order.Time.GTC, 1)
 ```
@@ -199,6 +201,7 @@ degiro.buyorder(Order.Type.MARKET, Product(products[0]).id, Order.Time.GTC, 1)
 
 The stop loss price has to be higher than the current price, when current price reaches the stoploss price the order is placed:
 **arguments**: order type, product id, execution time type (either Order.Time.DAY for "valid on a daily basis", or Order.Time.GTC for "unlimited"), size
+
 ``` python
 degiro.buyorder(Order.Type.STOPLOSS, Product(products[0]).id, Order.Time.GTC, 1, None, 38)
 ```
