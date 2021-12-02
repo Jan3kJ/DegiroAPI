@@ -86,30 +86,7 @@ class DeGiro:
 #         return client_info_response
 
     def login_safe(self):
-        login_response = self.__request(DeGiro.__LOGIN_URL, None, 
-                                        {
-                                            'username': getpass.getpass("Degiro Username: "),
-                                            'password': getpass.getpass("Degiro Password: "),
-                                            'isPassCodeReset': False,
-                                            'isRedirectToMobile': False
-                                        }, 
-                                        request_type=DeGiro.__POST_REQUEST,
-                                        error_message='Could not login.')
-        self.session_id = login_response['sessionId']
-        client_info_payload = {'sessionId': self.session_id}
-        client_info_response = self.__request(DeGiro.__CLIENT_INFO_URL, None, client_info_payload,
-                                              error_message='Could not get client info.')
-        self.client_info = ClientInfo(client_info_response['data'])
-
-        cookie = {
-            'JSESSIONID': self.session_id
-        }
-
-        client_token_response = self.__request(DeGiro.__CONFIG_URL, cookie=cookie, request_type=DeGiro.__GET_REQUEST,
-                                               error_message='Could not get client config.')
-        self.client_token = client_token_response['data']['clientId']
-
-#         return client_info_response
+        return self.login(username=getpass.getpass("Degiro Username: "), password=getpass.getpass("Degiro Password: "))
 
     def logout(self):
         logout_payload = {
