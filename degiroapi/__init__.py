@@ -19,6 +19,7 @@ class NoChangeError(Exception):
 
 class DeGiro:
     __LOGIN_URL = 'https://trader.degiro.nl/login/secure/login'
+    __LOGIN_TOTP_URL = 'https://trader.degiro.nl/login/secure/login/totp'
     __CONFIG_URL = 'https://trader.degiro.nl/login/secure/config'
 
     __LOGOUT_URL = 'https://trader.degiro.nl/trading/secure/logout'
@@ -64,17 +65,19 @@ class DeGiro:
     
     def logged(self): return type(self.session_id)==str
 
-    def login(self, username, password, **kwargs):
+    def login(self, username, password, totp=None):
         login_payload = {
             'username': username,
             'password': password,
             'isPassCodeReset': False,
             'isRedirectToMobile': False
         }
-        login_payload.update(kwargs)
-        if 'oneTimePassword' in login_payload:
-            DeGiro.__LOGIN_URL = 'https://trader.degiro.nl/login/secure/login/totp'
-        login_response = self.__request(DeGiro.__LOGIN_URL, None, login_payload, request_type=DeGiro.__POST_REQUEST,
+        if totp:
+            login_payload["oneTimePassword"] = totp
+            url = DeGiro.__LOGIN_TOTP_URL
+        else:
+            url = DeGiro.__LOGIN_URL
+        login_response = self.__request(url, None, login_payload, request_type=DeGiro.__POST_REQUEST,
                                         error_message='Could not login.')
         self.session_id = login_response['sessionId']
         client_info_payload = {'sessionId': self.session_id}
@@ -92,8 +95,11 @@ class DeGiro:
 
 #         return client_info_response
 
-    def login_safe(self):
-        return self.login(username=getpass.getpass("Degiro Username: "), password=getpass.getpass("Degiro Password: "))
+    def login_safe(self, auth2fa=False):
+        totp = None
+        if auth2fa:
+            totp = getpass.getpass(prompt='TOPT: ')
+        return self.login(username=getpass.getpass("Degiro Username: "), password=getpass.getpass("Degiro Password: "), totp=totp)
 
     def logout(self):
         logout_payload = {
