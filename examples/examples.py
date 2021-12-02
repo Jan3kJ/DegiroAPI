@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 degiro = degiroapi.DeGiro()
 degiro.login("username", "password")
 
+# login with 2fa
+otp = input("Input Google Authenticator password:")
+degiro.login("username", "password", oneTimePassword=otp.strip())
+
 # logout
 degiro.logout()
 
@@ -21,6 +25,11 @@ for data in cashfunds:
 portfolio = degiro.getdata(degiroapi.Data.Type.PORTFOLIO, True)
 for data in portfolio:
     print(data)
+
+# download portfolio as csv file
+csv_portfolio = degiro.download_csv('PORTFOLIO', datetime(2019, 1, 1), datetime.now())
+with open('portfolio.csv', 'w') as file:
+    file.write(csv_portfolio)
 
 # output one search result
 products = degiro.search_products('Pfizer')

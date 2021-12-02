@@ -41,6 +41,10 @@ class DeGiro:
     __PRICE_DATA_URL = 'https://charting.vwdservices.com/hchart/v1/deGiro/data.js'
 
     __COMPANY_RATIOS_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-ratios/'
+
+    __CSV_PORTFOLIO_URL = 'https://trader.degiro.nl/reporting/secure/v3/positionReport/csv'
+    __CSV_TRANSACTIONS_URL = 'https://trader.degiro.nl/reporting/secure/v3/transactionReport/csv'
+    __CSV_ACCOUNT_URL = 'https://trader.degiro.nl/reporting/secure/v3/cashAccountReport/csv'
     __COMPANY_PROFILE_URL = 'https://trader.degiro.nl/dgtbxdsservice/company-profile/v2/'
     __FINANCIALS_URL= 'https://trader.degiro.nl/dgtbxdsservice/financial-statements/'
     
@@ -60,13 +64,16 @@ class DeGiro:
     
     def logged(self): return type(self.session_id)==str
 
-    def login(self, username, password):
+    def login(self, username, password, **kwargs):
         login_payload = {
             'username': username,
             'password': password,
             'isPassCodeReset': False,
             'isRedirectToMobile': False
         }
+        login_payload.update(kwargs)
+        if 'oneTimePassword' in login_payload:
+            DeGiro.__LOGIN_URL = 'https://trader.degiro.nl/login/secure/login/totp'
         login_response = self.__request(DeGiro.__LOGIN_URL, None, login_payload, request_type=DeGiro.__POST_REQUEST,
                                         error_message='Could not login.')
         self.session_id = login_response['sessionId']
@@ -100,7 +107,7 @@ class DeGiro:
 
     @staticmethod
     def __request(url, cookie=None, payload=None, headers=None, data=None, post_params=None, request_type=__GET_REQUEST,
-                  error_message='An error occurred.')->Dict:
+                  error_message='An error occurred.', return_raw_response=False)->Dict:
 
         if request_type == DeGiro.__DELETE_REQUEST:
             response = session.delete(url, json=payload)
@@ -120,10 +127,13 @@ class DeGiro:
             raise Exception(f'Unknown request type: {request_type}')
 
         if response.status_code == 200 or response.status_code == 201:
-            try:
-                return response.json()
-            except:
-                return "No data"
+            if return_raw_response:
+                return response.text
+            else:
+                try:
+                    return response.json()
+                except:
+                    return "No data"
         elif response.status_code == 401:
             raise AuthorisationError("Request not authorized. Session probably expired.")  
         
@@ -188,7 +198,7 @@ class DeGiro:
             'intAccount': self.client_info.account_id,
             'sessionId': self.session_id
         }
-        return self.__request(DeGiro.__COMPANY_RATIOS_URL+product_isin,
+        return self.__request(DeGiro.__COMPANY_RATIOS_URL + product_isin,
                               None, product_info_payload,
                               headers={'content-type': 'application/json'},
                               data=None,
@@ -491,10 +501,8 @@ class DeGiro:
                 'userToken': self.client_token
                 }
 
-        
-
         return self.__request(DeGiro.__PRICE_DATA_URL, None, price_payload,
-                             error_message='Could not get real time price')['series']
+                              error_message='Could not get real time price')['series']
 
     def buyorder(self, orderType, productId, timeType, size, limit=None, stop_loss=None):
         place_buy_order_params = {
@@ -579,6 +587,30 @@ class DeGiro:
         return \
             self.__request(DeGiro.__GET_STOCKS_URL, None, stock_list_params, error_message='Could not get stock list')[
                 'products']
+
+    def download_csv(self, csv_type, from_date=None, to_date=None, country='NL', lang='nl'):
+        if csv_type.upper() not in ('ACCOUNT', 'PORTFOLIO', 'TRANSACTIONS'):
+            raise Exception("csv_type should be one of ('ACCOUNT', 'PORTFOLIO', 'TRANSACTIONS')")
+        if csv_type.upper() in ('PORTFOLIO', 'TRANSACTIONS') and from_date is None:
+            raise Exception("from_date is required for csv_type %s" % csv_type.upper())
+        if to_date is None:
+            to_date = datetime.now()
+        csv_payload = {
+            'intAccount': self.client_info.account_id,
+            'sessionId': self.session_id,
+            'fromDate': from_date.strftime('%d/%m/%Y'),
+            'toDate': to_date.strftime('%d/%m/%Y'),
+            'country': country,
+            'lang': lang
+        }
+        url = None
+        if csv_type.upper() == 'ACCOUNT':
+            url = DeGiro.__CSV_ACCOUNT_URL
+        if csv_type.upper() == 'PORTFOLIO':
+            url = DeGiro.__CSV_PORTFOLIO_URL
+        if csv_type.upper() == 'TRANSACTIONS':
+            url = DeGiro.__CSV_TRANSACTIONS_URL
+        return self.__request(url, None, csv_payload, error_message='Could not get csv', return_raw_response=True)
 
     def get_exchange_rate(self, exchange):
         '''Provides real time exchange rates for the most common currencies.
