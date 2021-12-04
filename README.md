@@ -7,7 +7,7 @@ An unofficial API for the trading platform Degiro written in Python with the abi
 ### Installing
 
 ``` python
-pip install degiroapi
+pip install git+https://github.com/Hubald/DegiroAPI.git
 ```
 
 ### Dependecies
