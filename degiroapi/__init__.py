@@ -1,7 +1,7 @@
 from typing import Dict
 
 import requests, json
-from datetime import datetime
+from datetime import datetime, timedelta
 now = datetime.now
 import getpass
 from degiroapi.order import Order
@@ -324,8 +324,10 @@ class DeGiro:
                               delete_order_params,
                               request_type=DeGiro.__DELETE_REQUEST,
                               error_message='Could not delete order' + " " + orderId)
+
     def get_order(self, orderId):
-        ords = DataFrame(self.orders())
+        from_date = (now() - timedelta(days=90)).date()  # max is 90 days
+        ords = DataFrame(self.orders(from_date))
         ords = ords[ords['orderId']==orderId]
         if len(ords)==1:
             return ords.iloc[0].to_dict()
