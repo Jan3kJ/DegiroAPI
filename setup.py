@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="degiroapi",
-    version="0.9.6",
+    version="0.9.7",
     author="Lorenz Kraus",
     author_email="lorenz.kraus@gmail.com",
     description="An unofficial API for the trading platform Degiro written in Python",
@@ -19,8 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires = [
-        'requests',
-        'pandas',
+    install_requires=[
+        'requests'
     ]
 )

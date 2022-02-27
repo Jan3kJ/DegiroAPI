@@ -8,7 +8,6 @@ from degiroapi.order import Order
 from degiroapi.client_info import ClientInfo
 from degiroapi.datatypes import Data
 from degiroapi.intervaltypes import Interval
-from pandas import DataFrame
 session = requests.Session()
 
 class AuthorisationError(Exception):
@@ -327,12 +326,11 @@ class DeGiro:
 
     def get_order(self, orderId):
         from_date = (now() - timedelta(days=90)).date()  # max is 90 days
-        ords = DataFrame(self.orders(from_date))
-        ords = ords[ords['orderId']==orderId]
-        if len(ords)==1:
-            return ords.iloc[0].to_dict()
-        elif len(ords)>1:
-            return ords.iloc[-1].to_dict()
+        filtered_orders = [x for x in self.orders(from_date) if x['orderId'] == orderId]
+        if len(filtered_orders) == 1:
+            return filtered_orders[0]
+        elif len(filtered_orders) > 1:
+            return filtered_orders[-1]
         else:
             return None
 
