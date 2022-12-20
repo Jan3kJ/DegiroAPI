@@ -8,7 +8,9 @@ from degiroapi.order import Order
 from degiroapi.client_info import ClientInfo
 from degiroapi.datatypes import Data
 from degiroapi.intervaltypes import Interval
+
 session = requests.Session()
+session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'})
 
 class AuthorisationError(Exception):
     pass
